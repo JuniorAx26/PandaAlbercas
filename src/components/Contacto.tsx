@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { SITE, whatsappLink, formatWhatsappPretty } from "@/lib/site";
+import { createQuote } from "@/app/actions/quotes";
 
 type FormState = {
   nombre: string;
   ciudad: "Tampico" | "Ciudad Madero" | "Altamira" | "";
   tipo: "Residencial" | "Comercial" | "";
   mensaje: string;
+  // honeypot
+  website: string;
 };
 
 const INITIAL: FormState = {
@@ -15,27 +18,46 @@ const INITIAL: FormState = {
   ciudad: "",
   tipo: "",
   mensaje: "",
+  website: "",
 };
+
+type SubmitState =
+  | { kind: "idle" }
+  | { kind: "error"; message: string }
+  | { kind: "success"; ref: string | null; stored: boolean };
 
 export function Contacto() {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [touched, setTouched] = useState(false);
+  const [state, setState] = useState<SubmitState>({ kind: "idle" });
+  const [pending, startTransition] = useTransition();
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((s) => ({ ...s, [k]: v }));
-
-  function buildMessage(): string {
-    const ciudad = form.ciudad || "Tampico/Madero/Altamira";
-    const tipo   = form.tipo ? `(${form.tipo.toLowerCase()})` : "";
-    const detalle = form.mensaje ? `\n\nDetalle: ${form.mensaje}` : "";
-    return `Hola ${SITE.name}, soy ${form.nombre || "[tu nombre]"}. Me interesa una cotización para mi alberca en ${ciudad} ${tipo}.${detalle}`;
-  }
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setTouched(true);
     if (!form.nombre || !form.ciudad) return;
-    window.open(whatsappLink(buildMessage()), "_blank", "noopener,noreferrer");
+
+    startTransition(async () => {
+      const result = await createQuote({
+        nombre: form.nombre,
+        ciudad: form.ciudad,
+        tipo: form.tipo || "Residencial",
+        mensaje: form.mensaje,
+        website: form.website,
+      });
+
+      if (!result.ok) {
+        setState({ kind: "error", message: result.error });
+        return;
+      }
+
+      setState({ kind: "success", ref: result.id, stored: result.stored });
+      // Pequeña pausa para que el usuario vea la confirmación, luego WhatsApp.
+      window.open(result.whatsappUrl, "_blank", "noopener,noreferrer");
+    });
   }
 
   const errNombre = touched && !form.nombre;
@@ -52,7 +74,8 @@ export function Contacto() {
             </h2>
             <p className="mt-3 text-ink-mute max-w-xl">
               Llena el formulario y te respondemos por WhatsApp en menos de 24 horas hábiles
-              con cotización por escrito. También puedes escribirnos directo.
+              con cotización por escrito. Cada solicitud queda registrada y atendida en orden
+              de llegada.
             </p>
 
             <ul className="mt-8 space-y-4">
@@ -97,8 +120,24 @@ export function Contacto() {
             onSubmit={onSubmit}
             className="rounded-2xl bg-white border border-pool-100 shadow-card p-6 sm:p-8"
           >
+            {/* honeypot — invisible para humanos, captura bots */}
+            <input
+              type="text"
+              name="website"
+              value={form.website}
+              onChange={(e) => set("website", e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden
+              className="hidden"
+            />
+
             <div className="space-y-5">
-              <Field label="Nombre completo" required error={errNombre && "Tu nombre nos ayuda a personalizar la cotización."}>
+              <Field
+                label="Nombre completo"
+                required
+                error={errNombre && "Tu nombre nos ayuda a personalizar la cotización."}
+              >
                 <input
                   type="text"
                   value={form.nombre}
@@ -106,6 +145,7 @@ export function Contacto() {
                   className="input"
                   autoComplete="name"
                   placeholder="Ej. José Alvarado"
+                  disabled={pending}
                 />
               </Field>
 
@@ -115,6 +155,7 @@ export function Contacto() {
                     value={form.ciudad}
                     onChange={(e) => set("ciudad", e.target.value as FormState["ciudad"])}
                     className="input"
+                    disabled={pending}
                   >
                     <option value="">Selecciona</option>
                     <option>Tampico</option>
@@ -127,8 +168,9 @@ export function Contacto() {
                     value={form.tipo}
                     onChange={(e) => set("tipo", e.target.value as FormState["tipo"])}
                     className="input"
+                    disabled={pending}
                   >
-                    <option value="">Cualquiera</option>
+                    <option value="">Residencial (predeterminado)</option>
                     <option>Residencial</option>
                     <option>Comercial</option>
                   </select>
@@ -142,19 +184,49 @@ export function Contacto() {
                   rows={4}
                   className="input resize-none"
                   placeholder="Ej. Alberca de 6×3 m, agua verdosa hace 5 días, no sé si la bomba sigue funcionando bien."
+                  disabled={pending}
                 />
               </Field>
 
               <button
                 type="submit"
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-full bg-pool-grad text-white font-bold shadow-card hover:shadow-card-hover transition"
+                disabled={pending}
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-full bg-pool-grad text-white font-bold shadow-card hover:shadow-card-hover transition disabled:opacity-60 disabled:cursor-wait"
               >
-                <WaIcon />
-                Enviar por WhatsApp
+                {pending ? (
+                  <>
+                    <Spinner /> Guardando…
+                  </>
+                ) : (
+                  <>
+                    <WaIcon /> Enviar por WhatsApp
+                  </>
+                )}
               </button>
 
+              {state.kind === "error" && (
+                <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                  {state.message}
+                </div>
+              )}
+              {state.kind === "success" && (
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-900">
+                  <p className="font-semibold">¡Cotización registrada!</p>
+                  <p className="mt-0.5 leading-relaxed">
+                    {state.stored
+                      ? "Quedó guardada y abrimos WhatsApp para que mandes el mensaje. "
+                      : "Abrimos WhatsApp con el mensaje prearmado. "}
+                    {state.ref && (
+                      <span>
+                        Referencia: <code className="font-mono">{state.ref.slice(0, 8)}</code>.
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+
               <p className="text-xs text-ink-mute leading-relaxed">
-                Al enviar autorizas que Triana&apos;s clean te contacte por WhatsApp en
+                Al enviar autorizas que {SITE.name} te contacte por WhatsApp en
                 relación a tu cotización. No compartimos tus datos con terceros.
                 Conforme a la Ley Federal de Protección de Datos Personales en Posesión
                 de los Particulares.
@@ -179,6 +251,10 @@ export function Contacto() {
           outline: none;
           border-color: #1E8FB8;
           box-shadow: 0 0 0 3px rgba(30, 143, 184, 0.15);
+        }
+        .input:disabled {
+          background: #F2F7FA;
+          color: #5C636B;
         }
       `}</style>
     </section>
@@ -211,6 +287,19 @@ function WaIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M20.52 3.48A11.95 11.95 0 0012.05.05C5.5.05.16 5.39.16 11.93c0 2.1.55 4.14 1.6 5.96L0 24l6.27-1.64a11.9 11.9 0 005.78 1.47h.01c6.55 0 11.88-5.34 11.88-11.88 0-3.17-1.23-6.15-3.42-8.47z" />
+    </svg>
+  );
+}
+function Spinner() {
+  return (
+    <svg
+      className="size-4 animate-spin"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }
