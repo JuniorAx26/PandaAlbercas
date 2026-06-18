@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-pool: #1E8FB8;
+  --color-pool-deep: #0A5572;
+  --color-ink: #0B0D10;
+  --color-cream: #FBFCFD;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  color: var(--color-ink);
+  background: var(--color-cream);
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Separadores sutiles */
+.divider-soft {
+  background: linear-gradient(90deg, transparent 0%, #B1DFF1 50%, transparent 100%);
+  height: 1px;
+  width: 100%;
+}
+
+/* Patrón sutil de "olas" para hero */
+.water-pattern {
+  background-image:
+    radial-gradient(circle at 25% 80%, rgba(255,255,255,0.10) 0%, transparent 35%),
+    radial-gradient(circle at 75% 20%, rgba(255,255,255,0.08) 0%, transparent 40%);
+}
+
+/* Card hover sutil */
+.card-hover {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+}
+
+/* Foco accesible */
+*:focus-visible {
+  outline: 2px solid var(--color-pool);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
