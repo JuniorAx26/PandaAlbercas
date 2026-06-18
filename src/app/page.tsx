@@ -7,10 +7,12 @@ import { Normatividad } from "@/components/Normatividad";
 import { Contacto } from "@/components/Contacto";
 import { Footer } from "@/components/Footer";
 import { WhatsAppFloat } from "@/components/WhatsAppFloat";
+import { TestModeBanner } from "@/components/TestModeBanner";
 
 export default function HomePage() {
   return (
     <main>
+      <TestModeBanner />
       <Navbar />
       <Hero />
       <div className="divider-soft" aria-hidden />

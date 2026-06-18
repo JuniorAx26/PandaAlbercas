@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SITE, whatsappLink } from "@/lib/site";
+import { SITE, whatsappLink, formatWhatsappPretty } from "@/lib/site";
 
 type FormState = {
   nombre: string;
@@ -68,7 +68,7 @@ export function Contacto() {
                     rel="noopener noreferrer"
                     className="text-pool-700 hover:underline text-sm"
                   >
-                    +52 833 107 4325 — solo mensajes
+                    {formatWhatsappPretty(SITE.whatsapp)} — solo mensajes
                   </a>
                 </div>
               </li>
