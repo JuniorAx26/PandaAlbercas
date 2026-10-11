@@ -2,6 +2,12 @@ import Link from "next/link";
 import { PandaLogo } from "./PandaLogo";
 import { SITE } from "@/lib/site";
 
+// Crédito de la casa (BONES §6.1): WhatsApp de ventas con un mensaje que nombra este sitio.
+const ALVBLOCK_CREDIT_HREF = `https://wa.me/525655867604?text=${encodeURIComponent(
+  "Hola AlvBlock, vi el sitio de Panda Albercas y quiero uno para mi negocio.",
+)}`;
+
+
 const NAV = [
   { href: "#inicio",      label: "Inicio" },
   { href: "#servicios",   label: "Servicios" },
@@ -72,6 +78,19 @@ export function Footer() {
           </p>
         </div>
       </div>
+      <p className="px-4 pb-6 text-center text-sm font-semibold tracking-wide text-white/85">
+        Edición:{" "}
+        <a
+          href={ALVBLOCK_CREDIT_HREF}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="AlvBlock.com — Escríbele a AlvBlock por WhatsApp"
+          className="font-extrabold text-white underline decoration-white/40 underline-offset-4 transition-colors hover:decoration-white"
+        >
+          AlvBlock.com
+        </a>{" "}
+        2026
+      </p>
     </footer>
   );
 }
